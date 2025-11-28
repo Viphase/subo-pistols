@@ -1,1 +1,1 @@
-#nothing
+print("Hello, World!")
