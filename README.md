@@ -1,13 +1,13 @@
 # **Субо-пистолетики**
 
-- desciption
+- ## desciption
   ...
-- install
+- ## install
   ...
-- use
+- ## use
   ...
-- examples
+- ## examples
   ...
-- status:
+- ## status:
   - **In development 🛠️**
   - Currently working on hand and arm detecting
