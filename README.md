@@ -11,7 +11,7 @@
   - [ ] Graphics and UI
   - [ ] Sound-design
 
-- ## desciption
+- ## description
 
   - A camera-tracked game about wild west shootout between two cowboys.
 
@@ -40,7 +40,6 @@
   5. Enjoy playing! 🌟
 
 - ## use
-
   ...
 
 - ## examples
