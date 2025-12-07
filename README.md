@@ -4,8 +4,10 @@
 
   - **`In development 🛠️`**
   - [x] Gun gesture tracking
-  - [ ] Arm angle detection
-  - [ ] Body segments and bullet shot
+  - [ ] Two body detection
+  - [ ] Bullet shot
+  - [ ] Body segments
+  - [ ] Game logic
   - [ ] Graphics and UI
   - [ ] Sound-design
 
@@ -13,7 +15,7 @@
 
   - A camera-tracked game about wild west shootout between two cowboys.
 
-  ![preview](./media/image.png/)
+  ![preview](./media/video.mp4/)
 
   > You play against your opponent standing in front of you. When the second will say "SHOOT!" you should decide between two options:
   >

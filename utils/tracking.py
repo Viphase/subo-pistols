@@ -1,17 +1,17 @@
-from cv2 import cvtColor, resize, COLOR_RGB2BGR, COLOR_BGR2RGB
 from mediapipe.tasks.python import vision
+from mediapipe.tasks import python as mp
 from mediapipe import Image, ImageFormat
-from mediapipe.tasks import python as mp_tasks
+from cv2 import cvtColor, resize, COLOR_RGB2BGR, COLOR_BGR2RGB
 from numpy import fliplr
 
 
 class MediaPipeFacade:
     def __init__(self):
-        base_options_hands = mp_tasks.BaseOptions(
+        base_options_hands = mp.BaseOptions(
             model_asset_path="./models/hand_landmarker.task"
         )
 
-        base_options_pose = mp_tasks.BaseOptions(
+        base_options_pose = mp.BaseOptions(
             model_asset_path="./models/pose_landmarker.task"
         )
 
