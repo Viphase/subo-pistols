@@ -16,11 +16,7 @@ def finger_dist(first, second, results) -> float:
     return ((x1 - x2)**2 + (y1 - y2)**2)**.5
 
 
-def is_pistol(results) -> bool:
-    if results is None or not results.hand_landmarks:
-        return False
-
-    lm = results.hand_landmarks[0]
+def is_pistol(hand) -> bool:
     open = 0
     closed = 0
 
@@ -30,8 +26,8 @@ def is_pistol(results) -> bool:
             if j + 1 > 20:
                 break
             current = Vector(
-                lm[j+1].x - lm[j].x,
-                lm[j+1].y - lm[j].y
+                hand[j+1].x - hand[j].x,
+                hand[j+1].y - hand[j].y
             )
             if prev is not None:
                 angle = degrees(acos((current * prev) / (current.dist() * prev.dist())))
@@ -76,17 +72,23 @@ def main():
             break
 
         hands, pose, frame, tracked = mp_facade.process_frame(frame, debug=True)
+        labels = []
 
-        if is_pistol(hands):
-            text = "GUN"
-            color = (0, 255, 0)
-        else:
-            text = "NO GUN"
-            color = (0, 0, 255)
+        for i, human in enumerate(tracked):
+            if human.right_hand is not None and is_pistol(human.right_hand):
+                text = f"Player {i+1} Right Hand: GUN"
+                color = (0, 255, 0)
+            else:
+                text = f"Player {i+1} Right Hand: NO GUN"
+                color = (0, 0, 255)
+            labels.append((text, color))
 
-        putText(frame, text, (50, 50), FONT_HERSHEY_SIMPLEX, 1, color, 2, LINE_AA)
-        imshow("testik", frame)
+        y = 50
+        for text, color in labels:
+            putText(frame, text, (50, y), FONT_HERSHEY_SIMPLEX, 0.8, color, 2, LINE_AA)
+            y += 40
 
+        imshow("bla bla", frame)
         key = waitKey(1)
         if key == ord('q'):
             cap.release()

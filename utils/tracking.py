@@ -51,15 +51,14 @@ class MediaPipeFacade:
         mp_image = Image(image_format=ImageFormat.SRGB, data=img)
         results_hands = self.hands.detect(mp_image)
         results_pose = self.pose.detect(mp_image)
-        
+        tracked = []
+
         if results_pose.pose_landmarks:
             n = len(results_pose.pose_landmarks)
             if n > 2:
                 print(f"Detected {n} people, only 2")
-
-        tracked = []
-        if results_pose.pose_landmarks:
-            for i, pose_lm in enumerate(results_pose.pose_landmarks[:2]):
+            
+            for i, _ in enumerate(results_pose.pose_landmarks[:2]):
                 tracked.append(Human(results_hands, results_pose, img.shape, i))
 
         if debug:
@@ -77,30 +76,62 @@ class MediaPipeFacade:
                         py = int(lm.y * img.shape[0])
                         circle(img, (px, py), 3, (0, 255, 0), -1)
                 for pose in tracked[:2]:
-                    img = line(img, pose.head(), pose.knees(), (255,255,0), 2)
+                    img = line(img, (pose.collider.A.x, pose.collider.A.y), (pose.collider.B.x, pose.collider.B.y), (255,255,0), 2)
         return results_hands, results_pose, cvtColor(img, COLOR_RGB2BGR), tracked
 
 
 class Human:
     def __init__(self, hands_results, pose_results, img_shape, i):
         self.pose = pose_results.pose_landmarks[i]
-        if hands_results is None or not hands_results.hand_landmarks:
-            self.hands = None
-        else:
-            self.hands = hands_results.hand_landmarks
-
         self.img_shape = img_shape
-        self.collider = Segment(*self.head(), *self.knees())
+        self.left_hand = None
+        self.right_hand = None
 
-    def head(self):
-        nose_x, nose_y = self.pose[0].x * self.img_shape[1], self.pose[0].y * self.img_shape[0]
-        neck_x, neck_y = self.pose[1].x * self.img_shape[1], self.pose[1].y * self.img_shape[0]
-        x = int(nose_x)
-        y = int(nose_y - 4 * (nose_y - neck_y))
-        return x, y
+        if hands_results and hands_results.hand_landmarks:
+            self.__assign_hands(hands_results)
 
-    def knees(self):
-        lm_l = self.pose[31]
-        lm_r = self.pose[32]
-        return int((lm_l.x + lm_r.x) / 2 * self.img_shape[1]), int((lm_l.y + lm_r.y) / 2 * self.img_shape[0])
+    def __assign_hands(self, hands_results):
+        for hand in hands_results.hand_landmarks:
+            wx, wy = hand[0].x, hand[0].y
+            lx, ly = self.pose[11].x, self.pose[11].y # это плечи
+            rx, ry = self.pose[12].x, self.pose[12].y
 
+            left = (wx - lx) ** 2 + (wy - ly) ** 2
+            right = (wx - rx) ** 2 + (wy - ry) ** 2
+            if left < right:
+                self.left_hand = hand
+            else:
+                self.right_hand = hand
+
+    @property
+    def collider(self):
+        nose = self.pose[0]
+        neck = self.pose[1]
+        k1 = self.pose[31]
+        k2 = self.pose[32]
+
+        head_x = int(nose.x * self.img_shape[1])
+        head_y = int(nose.y * self.img_shape[0] - 4 * (nose.y * self.img_shape[0] - neck.y * self.img_shape[0]))
+        knees_x = int((k1.x + k2.x) * 0.5 * self.img_shape[1])
+        knees_y = int((k1.y + k2.y) * 0.5 * self.img_shape[0])
+
+        return Segment(head_x, head_y, knees_x, knees_y)
+    
+    @property
+    def bullet_elbow(self):
+        if self.left_hand:
+            elbow = self.pose[13]
+        else:
+            elbow = self.pose[14]
+
+        if self.left_hand:
+            hand = self.pose[15]
+        else:
+            hand = self.pose[16]
+
+        elbow_x = int(elbow.x * self.img_shape[1])
+        elbow_y = int(elbow.y * self.img_shape[0])
+        hand_x = int(hand.x * self.img_shape[1])
+        hand_y = int(hand.y * self.img_shape[0])
+
+        return Line(elbow_x, elbow_y, hand_x, hand_y)
