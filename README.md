@@ -4,12 +4,12 @@
 
   - **`In development 🛠️`**
   - [x] Gun gesture tracking
-  - [ ] Two body detection
-  - [ ] Bullet shot
-  - [ ] Body segments
-  - [ ] Game logic
-  - [ ] Graphics and UI
-  - [ ] Sound-design
+  - [ ] Two body detection - 14.12
+  - [ ] Bullet shot - 16.12
+  - [ ] Body segments - 17.12
+  - [ ] Game logic - 18.12
+  - [ ] Graphics and UI - 16.12 
+  - [ ] Sound-design - 20.12
 
 - ## description
 
