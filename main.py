@@ -15,8 +15,11 @@ def main():
         frame, tracked = mp_facade.process_frame(frame, debug=True)
         labels = []
 
+        tracked = sorted(tracked, key= lambda human: human.pose[0].x)
+
+
         for i, human in enumerate(tracked[:2]):
-            if human.right_hand is not None and is_pistol(human.right_hand, frame.shape):
+            if human.right_hand is not None and is_pistol(human.right_hand, human.img_shape):
                 text = f"Player {i+1} Right Hand: GUN"
                 color = (0, 255, 0)
             else:
