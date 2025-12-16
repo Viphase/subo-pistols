@@ -2,7 +2,7 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks import python as mp
 from mediapipe import Image, ImageFormat
 from cv2 import line, circle, cvtColor, resize, COLOR_RGB2BGR, COLOR_BGR2RGB
-from numpy import fliplr
+from numpy import fliplr, hstack
 from utils.geometry import Segment, Line
 
 
@@ -35,67 +35,92 @@ class MediaPipeFacade:
         )
 
 
-    def process_frame(self, frame, debug: bool = False):
-        '''
-        ## Returns:
-        - frame
-        - tracked people list
-        '''
+    def process_frame(self, frame, frame_number, debug: bool = False):
 
         img = fliplr(frame)
         img = cvtColor(img, COLOR_BGR2RGB)
         img = resize(img, (640, 360))
 
-        mp_image = Image(image_format=ImageFormat.SRGB, data=img)
-        results_hands = self.hands.detect(mp_image)
-        results_pose = self.pose.detect(mp_image)
-        tracked = []
 
-        if results_pose.pose_landmarks:
-            n = len(results_pose.pose_landmarks)
+        first_half = img[:, : img.shape[1] // 2, :].copy()
+        second_half = img[:, img.shape[1] // 2 :, :].copy()
+        mp_first_half = Image(image_format=ImageFormat.SRGB, data=first_half)
+        results_hands_first = self.hands.detect(mp_first_half)
+        results_pose_first = self.pose.detect(mp_first_half)
+
+        if results_pose_first.pose_landmarks:
+            n = len(results_pose_first.pose_landmarks)
             if n > 2:
-                print(f"Detected {n} people, only 2")
-            
-            for i, _ in enumerate(results_pose.pose_landmarks[:2]):
-                tracked.append(Human(results_hands, results_pose, img.shape, i))
+                print(f"В левой части поля должен находится только один человек")
+            if n < 1:
+                print("Игрок должен встать в левую часть поля")
 
-        if debug:
-            if results_hands.hand_landmarks:
-                for hand in results_hands.hand_landmarks[:4]:
-                    for lm in hand:
-                        px = int(lm.x * img.shape[1])
-                        py = int(lm.y * img.shape[0])
-                        circle(img, (px, py), 3, (255, 0, 0), -1)
+        mp_second_half = Image(image_format=ImageFormat.SRGB, data=second_half)
+        results_hands_second = self.hands.detect(mp_second_half)
+        results_pose_second = self.pose.detect(mp_second_half)
 
-            if results_pose.pose_landmarks:
-                for pose in results_pose.pose_landmarks[:2]:
-                    for lm in pose:
-                        px = int(lm.x * img.shape[1])
-                        py = int(lm.y * img.shape[0])
-                        circle(img, (px, py), 3, (0, 255, 0), -1)
-                for pose in tracked[:2]:
-                    img = line(img, (pose.collider.A.x, pose.collider.A.y), (pose.collider.B.x, pose.collider.B.y), (255,255,0), 2)
-        return cvtColor(img, COLOR_RGB2BGR), tracked
+        if results_pose_second.pose_landmarks:
+            n = len(results_pose_second.pose_landmarks)
+            if n > 2:
+                print(f"В левой части поля должен находится только один человек")
+            if n < 1:
+                print("Игрок должен встать в левую часть поля")
+        # img = debugf(img, first_half.shape, results_hands_first.append(results_hands_second), results_pose_first.append(results_pose_second))
+        return img, (results_hands_first,results_hands_second), (results_pose_first, results_pose_second)
 
+# def debugf(img, half_image_shape, results_hands, results_pose):
+#     if results_hands.hand_landmarks:
+#         for hand in results_hands.hand_landmarks[:4]:
+#             for lm in hand:
+#                 px = int(lm.x * half_image_shape[1])
+#                 py = int(lm.y * half_image_shape[0])
+#                 circle(img, (px, py), 3, (255, 0, 0), -1)
+
+#     if results_pose.pose_landmarks:
+#         for pose in results_pose.pose_landmarks[:2]:
+#             for lm in pose:
+#                 px = int(lm.x * half_image_shape[1])
+#                 py = int(lm.y * half_image_shape[0])
+#                 circle(img, (px, py), 3, (0, 255, 0), -1)
+
+#         line(img, (pose.collider.A.x, pose.collider.A.y), (pose.collider.B.x, pose.collider.B.y), (255,255,0), 2)
+#     return cvtColor(img, COLOR_RGB2BGR)
 
 class Human:
-    def __init__(self, hands_results, pose_results, img_shape, i):
-        self.pose = pose_results.pose_landmarks[i]
+    def __init__(self, hands_results, pose_results, img_shape):
+        self.pose = pose_results
         self.img_shape = img_shape
-        self.left_hand = None
-        self.right_hand = None
+        self.hands_results = hands_results
+        self.left_hand = hands_results
+        self.right_hand = hands_results
 
-        if hands_results and hands_results.hand_landmarks:
-            self.__assign_hands(hands_results)
+    @property
+    def left_hand(self):
+        return self._left_hand
     
-    def __assign_hands(self, hands_results):
-        for i, hand in enumerate(hands_results.hand_landmarks):
-            hand_type = hands_results.handedness[i][0].category_name
+    @left_hand.setter
+    def left_hand(self, hands_results):
+        if hands_results is not None:
+            for i, hand in enumerate(hands_results.hand_landmarks):
+                hand_type = hands_results.handedness[i][0].category_name
+                if hand_type == "Right":
+                    self._left_hand = hand
+        else:
+            self._left_hand = None
 
-            if hand_type == "Left":
-                self.right_hand = hand
-            else:
-                self.left_hand = hand
+    @property
+    def right_hand(self):
+        return self._right_hand
+    
+    @right_hand.setter
+    def right_hand(self, hands_results):
+        if hands_results is not None:
+            for i, hand in enumerate(hands_results.hand_landmarks):
+                hand_type = hands_results.handedness[i][0].category_name
+                if hand_type == "Left":
+                    self._right_hand = hand
+        else:
+            self._right_hand = None
 
     @property
     def collider(self):
