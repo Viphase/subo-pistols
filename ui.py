@@ -1,26 +1,37 @@
 import sys
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QPushButton, QVBoxLayout, QLabel
-)
-from PyQt6.QtGui import QPixmap, QPalette, QBrush
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel
+from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFontDatabase, QFont
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 
 class GameMenu(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Меню игры")
-        self.bg_path = "./ui/background.png"
-        self.showFullScreen()
-        self.set_background()
+        self.setWindowTitle("Cowboy-Shootout")
 
-        self.label = QLabel("Cowboy-Shootout")
+        self.menu_bg = "./ui/menu_background.png"
+        self.game_bg = "./ui/game_background.png"
+
+        with open("./ui/cowboy_font.ttf", "rb") as f:
+            font_data = f.read()
+
+        font_id = QFontDatabase.addApplicationFontFromData(font_data)
+        font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+
+        title_font = QFont(font_family)
+        title_font.setPointSize(120)
+        title_font.setBold(True)
+
+        self.menu_widget = QWidget()
+        menu_layout = QVBoxLayout(self.menu_widget)
+
+        self.label = QLabel("COWBOY-SHOOTOUT")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label.setFont(title_font)
         self.label.setStyleSheet("""
             QLabel {
-                font-size: 120px;
-                font-weight: bold;
                 color: black;
                 background: rgba(255,255,255,150);
                 padding: 20px;
@@ -29,43 +40,133 @@ class GameMenu(QWidget):
         """)
 
         self.play_btn = QPushButton("Играть")
-        self.settings_btn = QPushButton("Настройки")
+        self.settings_btn = QPushButton("Правила")
         self.exit_btn = QPushButton("Выход")
 
-        self.buttons = (self.play_btn, self.settings_btn, self.exit_btn)
-
-        for b in self.buttons:
+        for b in (self.play_btn, self.settings_btn, self.exit_btn):
             b.setMinimumHeight(100)
+            b.setFixedWidth(600)
             b.setStyleSheet("""
                 QPushButton {
                     font-size: 48px;
                     color: white;
                     background: rgba(0,0,0,150);
                     border-radius: 20px;
-                    width: 600px
                 }
                 QPushButton:hover {
                     background: rgba(0,0,0,200);
                 }
             """)
 
-        layout = QVBoxLayout()
-        layout.addStretch()
-        layout.addWidget(self.label, alignment=Qt.AlignmentFlag.AlignCenter)
-        layout.addSpacing(50)
-        layout.addWidget(self.play_btn, alignment=Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.settings_btn, alignment=Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.exit_btn, alignment=Qt.AlignmentFlag.AlignCenter)
-        layout.addStretch()
+        menu_layout.addStretch()
+        menu_layout.addWidget(self.label, alignment=Qt.AlignmentFlag.AlignCenter)
+        menu_layout.addSpacing(50)
+        menu_layout.addWidget(self.play_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+        menu_layout.addWidget(self.settings_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+        menu_layout.addWidget(self.exit_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+        menu_layout.addStretch()
 
-        self.setLayout(layout)
+        self.settings_widget = QWidget()
+        settings_layout = QVBoxLayout(self.settings_widget)
+
+        self.settings_text = QLabel(
+            "Cowboy-Shootout — это дуэльная игра.\n\n"
+            "\n"
+            "• Два ковбоя стоят друг напротив друга\n"
+            "• Пистолет — выстрел\n"
+            "• Кулак — защита\n"
+            "• Побеждает самый быстрый\n"
+        )
+        self.settings_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.settings_text.setStyleSheet("""
+            QLabel {
+                font-size: 36px;
+                color: black;
+                background: rgba(255,255,255,180);
+                padding: 40px;
+                border-radius: 20px;
+            }
+        """)
+
+        self.back_btn = QPushButton("Назад")
+        self.back_btn.setFixedSize(400, 90)
+        self.back_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 40px;
+                color: white;
+                background: rgba(0,0,0,150);
+                border-radius: 20px;
+            }
+            QPushButton:hover {
+                background: rgba(0,0,0,200);
+            }
+        """)
+
+        settings_layout.addStretch()
+        settings_layout.addWidget(self.settings_text, alignment=Qt.AlignmentFlag.AlignCenter)
+        settings_layout.addSpacing(40)
+        settings_layout.addWidget(self.back_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+        settings_layout.addStretch()
+
+        self.settings_widget.hide()
+
+        self.game_widget = QLabel("ИГРА ЗАПУЩЕНА")
+        self.game_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.game_widget.setStyleSheet("""
+            QLabel {
+                font-size: 80px;
+                color: white;
+            }
+        """)
+        self.game_widget.hide()
+
+        main_layout = QVBoxLayout(self)
+        main_layout.addWidget(self.menu_widget)
+        main_layout.addWidget(self.settings_widget)
+        main_layout.addWidget(self.game_widget)
 
         self.exit_btn.clicked.connect(self.close)
-        self.play_btn.clicked.connect(lambda: print("Старт игры"))
-        self.settings_btn.clicked.connect(lambda: print("Открыть настройки"))
+        self.play_btn.clicked.connect(self.start_game)
+        self.settings_btn.clicked.connect(self.open_settings)
+        self.back_btn.clicked.connect(self.back_to_menu)
 
-    def set_background(self):
-        pixmap = QPixmap(self.bg_path).scaled(  
+        self.audio = QAudioOutput()
+        self.audio.setVolume(0.35)
+
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio)
+        self.player.setSource(QUrl.fromLocalFile("./ui/cowboy_music.mp3"))
+        self.player.mediaStatusChanged.connect(self.loop_music)
+        self.player.play()
+
+        self.showFullScreen()
+        self.set_background(self.menu_bg)
+
+    def loop_music(self, status):
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            self.player.setPosition(0)
+            self.player.play()
+
+    def start_game(self):
+        self.menu_widget.hide()
+        self.settings_widget.hide()
+        self.game_widget.show()
+        self.set_background(self.game_bg)
+
+    def open_settings(self):
+        self.menu_widget.hide()
+        self.settings_widget.show()
+        self.game_widget.hide()
+        self.set_background(self.menu_bg)
+
+    def back_to_menu(self):
+        self.settings_widget.hide()
+        self.menu_widget.show()
+        self.game_widget.hide()
+        self.set_background(self.menu_bg)
+
+    def set_background(self, path):
+        pixmap = QPixmap(path).scaled(
             self.size(),
             Qt.AspectRatioMode.IgnoreAspectRatio
         )
@@ -74,8 +175,9 @@ class GameMenu(QWidget):
         self.setPalette(palette)
 
     def resizeEvent(self, event):
-        self.set_background()
-        return super().resizeEvent(event)
+        bg = self.game_bg if self.game_widget.isVisible() else self.menu_bg
+        self.set_background(bg)
+        super().resizeEvent(event)
 
 
 if __name__ == "__main__":
