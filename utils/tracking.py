@@ -3,7 +3,7 @@ from mediapipe.tasks import python as mp
 from mediapipe import Image, ImageFormat
 from cv2 import line, circle, cvtColor, resize, COLOR_RGB2BGR, COLOR_BGR2RGB
 from numpy import fliplr, hstack
-from utils.line import Segment, Ray, Point
+from utils.line import Segment, Ray
 
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 320
@@ -55,6 +55,9 @@ class MediaPipeFacade:
                 print(f"В левой части поля должен находится только один человек")
             if n < 1:
                 print("Игрок должен встать в левую часть поля")
+        else:
+            results_pose_first = None
+            results_hands_first = None
 
         mp_second_half = Image(image_format=ImageFormat.SRGB, data=second_half)
         results_hands_second = self.hands.detect(mp_second_half)
@@ -66,7 +69,11 @@ class MediaPipeFacade:
                 print(f"В левой части поля должен находится только один человек")
             if n < 1:
                 print("Игрок должен встать в левую часть поля")
-        img = debugf(img, first_half.shape, results_hands_first, results_pose_first, results_hands_second,results_pose_second)
+        else:
+            results_pose_second = None
+            results_hands_second = None
+        if debug:
+            img = debugf(img, first_half.shape, results_hands_first, results_pose_first, results_hands_second,results_pose_second)
         return img, (results_hands_first,results_hands_second), (results_pose_first, results_pose_second)
 
 def debugf(img,half_image_shape,hands_left,pose_left,hands_right,pose_right):
@@ -106,11 +113,15 @@ def debugf(img,half_image_shape,hands_left,pose_left,hands_right,pose_right):
 
 class Human:
     def __init__(self, hands_results, pose_results, img_shape):
-        self.pose = pose_results
-        self.img_shape = img_shape
-        self.hands_results = hands_results
-        self.left_hand = hands_results
-        self.right_hand = hands_results
+        self.pose = pose_results # pose detector
+        self.img_shape = img_shape # image size
+
+        self.left_hand = hands_results # left hand landmarks
+        self.right_hand = hands_results # right hand landmarks
+
+        self.hp = 3 # current player hp
+        self.won = 0 # how many rounds player won
+        self.state = None # can have Gun or Shild or Nothing state
 
     @property
     def left_hand(self):
@@ -162,6 +173,20 @@ class Human:
                 end = (self.pose[16].x * SCREEN_WIDTH, self.pose[16].y * SCREEN_HEIGHT)
                 return Ray(start=start, point=end)
             except:
-                print("неправильное положение в кадре")
+                return None
         else:
-            print("Неправильное положение в кадре.")
+            return None
+        
+    @property
+    def shield(self):
+        if self.pose is not None:
+            try:
+                return Segment(self.pose[16].x * SCREEN_WIDTH, self.pose[16].y * SCREEN_HEIGHT + 50, self.pose[16].x * SCREEN_WIDTH, self.pose[16].y * SCREEN_HEIGHT - 50)
+            except:
+                return None
+        else:
+            return None
+        
+    def shoot(self, victim):
+        self.won += 1
+        victim.hp -= 1
