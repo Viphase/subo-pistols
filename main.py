@@ -19,7 +19,7 @@ def main():
         if not ret:
             break
         if frame_number % 10 == 0:
-            frame, hands_results, pose_results = mp_facade.process_frame(frame, debug=False )
+            frame, hands_results, pose_results = mp_facade.process_frame(frame, debug=True )
             labels = []
 
             if pose_results[0] is not None:
@@ -38,9 +38,9 @@ def main():
 
             if first_player.pose is not None and second_player.pose is not None:
                 result_of_round = round(first_player, second_player, frame.shape)
-            
-                for data in result_of_round:
-                    labels.append((data, (0, 0, 255)))
+                if result_of_round is not None:
+                    for data in result_of_round:
+                        labels.append((data, (0, 0, 255)))
 
             y = 50
             for text, color in labels:

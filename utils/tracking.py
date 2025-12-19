@@ -40,7 +40,7 @@ class MediaPipeFacade:
     def process_frame(self, frame, debug: bool = False):
 
         img = cvtColor(frame, COLOR_BGR2RGB)
-        img = resize(img, (640, 360))
+        img = resize(img, (1920, 1080))
 
 
         first_half = img[:, : img.shape[1] // 2, :].copy()

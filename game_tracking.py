@@ -53,34 +53,56 @@ def is_shield(hands, shape) -> bool:
 
 def round(first_player, second_player, shape):
 
-    if first_player.right_hand is not None and is_pistol(first_player.right_hand, shape):
-        first_player.state = "Gun"
-    elif first_player.left_hand is not None and is_shield(first_player.left_hand, shape):
-        first_player.state = "Shield"
-    else:
-        first_player.state = "Nothing"
+    if first_player.pose is not None and second_player.pose is not None and first_player.right_hand is not None and first_player.left_hand is not None and second_player.right_hand is not None and second_player.left_hand is not None and len(first_player.pose) >= 16 and len(second_player.pose) >= 16:
 
-    if second_player.right_hand is not None and is_pistol(second_player.right_hand, shape):
-        second_player.state = "Gun"
-    elif second_player.left_hand is not None and is_shield(second_player.left_hand, shape):
-        second_player.state = "Shield"
-    else:
-        second_player.state = "Nothing"
+        if is_pistol(first_player.right_hand, shape):
+            first_player.state = "Gun"
+        elif is_shield(first_player.left_hand, shape):
+            first_player.state = "Shield"
+        else:
+            first_player.state = "Nothing"
 
-    if  first_player.state == "Gun" and cross_ray_segment(first_player.bullet, second_player.collider):
-        if second_player.state == "Shield" and not cross_ray_segment(first_player.bullet, second_player.shield):
-            first_player.shoot(second_player)
-            return "First", f"FIrst: {first_player.state}", f"Second {second_player.state}"
+        if is_pistol(second_player.right_hand, shape):
+            second_player.state = "Gun"
+        elif is_shield(second_player.left_hand, shape):
+            second_player.state = "Shield"
         else:
-            return "Same", f"FIrst: {first_player.state}", f"Second {second_player.state}"
+            second_player.state = "Nothing"
+
+        if first_player.state == "Gun" and second_player.state != "Gun":
+            if cross_ray_segment(first_player.bullet, second_player.collider):
+                if second_player.state == "Shield":
+                    if cross_ray_segment(first_player.bullet, second_player.shield):
+                        return "Second def", f"First: {first_player.state}", f"Second: {second_player.state}"
+                    else:
+                        return "First won", f"First: {first_player.state}", f"Second: {second_player.state}"
+                else:
+                    return "First won", f"First: {first_player.state}", f"Second: {second_player.state}"
+            else:
+                return "First Missed", f"First: {first_player.state}", f"Second: {second_player.state}"
         
-    elif  second_player.state == "Gun" and cross_ray_segment(second_player.bullet, first_player.collider):
-        if first_player.state == "Shield" and not cross_ray_segment(second_player.bullet, first_player.shield):
-            second_player.shoot(first_player)
-            return "Second", f"FIrst: {first_player.state}", f"Second {second_player.state}"
-        else:
-            return "Same", f"FIrst: {first_player.state}", f"Second {second_player.state}"
-    
+        elif first_player.state != 'Gun' and second_player.state == "Gun":
+            if cross_ray_segment(second_player.bullet, first_player.collider):
+                if first_player.state == "Shield":
+                    if cross_ray_segment(second_player.bullet, second_player.shield):
+                        return "First def", f"First: {first_player.state}", f"Second: {second_player.state}"
+                    else:
+                        return "Second won", f"First: {first_player.state}", f"Second: {second_player.state}"
+                else:
+                    return "Second won", f"First: {first_player.state}", f"Second: {second_player.state}"
+            else:
+                return "Second missed", f"First: {first_player.state}", f"Second: {second_player.state}"
+
+        elif first_player.state == "Gun" and second_player.state == "Gun":
+            if cross_ray_segment(first_player.bullet, second_player.collider) and cross_ray_segment(second_player.bullet, first_player.collider):
+                return "Both won", f"First: {first_player.state}", f"Second: {second_player.state}"
+            elif cross_ray_segment(first_player.bullet, second_player.collider) and not cross_ray_segment(second_player.bullet, first_player.collider):
+                return "First won", f"First: {first_player.state}", f"Second: {second_player.state}"
+            elif not cross_ray_segment(first_player.bullet, second_player.collider) and cross_ray_segment(second_player.bullet, first_player.collider):
+                return "Second won", f"First: {first_player.state}", f"Second: {second_player.state}"
+            elif not cross_ray_segment(first_player.bullet, second_player.collider) and not cross_ray_segment(second_player.bullet, first_player.collider):
+                return "Both missed", f"First: {first_player.state}", f"Second: {second_player.state}"
+        
     else:
-        return "Same", f"FIrst: {first_player.state}", f"Second {second_player.state}"
-        
+        return "Not enough data"
+            
