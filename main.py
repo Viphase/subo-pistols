@@ -47,6 +47,7 @@ def main():
         second_player.update_state(frame.shape)
 
         debugf(frame, first_player, second_player)
+
         imshow("Cowboy Shootout", frame)
         if waitKey(1) == ord('q'):
             break

@@ -81,7 +81,30 @@ def round(first, second, shape):
     return None
 
 
-def debugf(frame, player, index):
+def debugf(frame, player1, player2):
+    if player1.collider:
+        start = (int(player1.collider.start.x), int(player1.collider.start.y))
+        end   = (int(player1.collider.end.x), int(player1.collider.end.y))
+        line(frame, start, end, (255,0,0), 2)
+
+    if player2.collider:
+        start = (int(player2.collider.start.x), int(player2.collider.start.y))
+        end = (int(player2.collider.end.x), int(player2.collider.end.y))
+        line(frame, start, end, (0,0,255), 2)
+
+    putText(frame, f"P1: {player1.state}", (50,50), FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+    putText(frame, f"P2: {player2.state}", (50,80), FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+    
+    if player1._shot:
+        putText(frame, "P1 shot!", (50,110), FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
+    if player2._shot:
+        putText(frame, "P2 shot!", (50,140), FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
+    
+    debug_tag(frame, player1, 1)
+    debug_tag(frame, player2, 2)
+
+
+def debug_tag(frame, player, index):
     if player.pose is None or len(player.pose) < 1:
         return
     
