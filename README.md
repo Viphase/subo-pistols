@@ -6,7 +6,7 @@
   - [x] Gun gesture tracking
   - [x] Two body detection - 14.12
   - [x] Bullet shot - 16.12
-  - [ ] Body segments - 17.12
+  - [x] Body segments - 17.12
   - [x] Game logic - 18.12
   - [x] Graphics and UI - 16.12 
   - [x] Sound-design - 20.12

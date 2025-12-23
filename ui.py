@@ -24,7 +24,6 @@ class GameMenu(QWidget):
         self.menu_bg = "./ui/menu_background.png"
         self.game_bg = "./ui/game_background.png"
 
-        # ---------- FONT ----------
         with open("./ui/cowboy_font.ttf", "rb") as f:
             font_data = f.read()
 
@@ -128,8 +127,8 @@ class GameMenu(QWidget):
         self.rules_text = QLabel(
             "Cowboy-Shootout — дуэль на реакцию\n\n"
             "- Два игрока стоят напротив камеры\n"
-            "- Правая рука пистолет - выстрел\n"
-            "- Левая рука кулак - щит\n"
+            "- Cперва наводишься правой рукой, потом делаешь жест пистолета - выстрел\n"
+            "- Наводишься левой рукой, потом сжимаешь в кулак - щит\n"
             "- У ковбоя есть 3 части тела - голова, тело и ноги\n"
             "  тебе нужно угадать куда выстрелить а где защититься\n"
             "- После нажатия кнопки продолжить, будет обратный отсчёт\n"
@@ -172,8 +171,8 @@ class GameMenu(QWidget):
         self.game_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.game_widget.setStyleSheet("""
             QLabel {
-                font-size: 96px;
-                color: white;
+                font-size: 150px;
+                color: red;
                 background: rgba(0,0,0,0);
                 padding: 20px;
                 border-radius: 15px;
@@ -187,12 +186,15 @@ class GameMenu(QWidget):
         main_layout.addWidget(self.rules_widget)
         main_layout.addWidget(self.game_widget)
 
-        self.exit_btn.clicked.connect(sys.exit(0))
+        self.exit_btn.clicked.connect(QApplication.quit)
         self.play_btn.clicked.connect(lambda: UI_EVENTS.update({"start": True}))
         self.continue_btn.clicked.connect(lambda: UI_EVENTS.update({"continue_game": True}))
 
         self.yes_btn.clicked.connect(lambda: UI_EVENTS.update({"instruction_yes": True}))
         self.no_btn.clicked.connect(lambda: UI_EVENTS.update({"instruction_no": True}))
+
+        self.showFullScreen()
+        self._set_background(self.menu_bg)
 
         self.audio = QAudioOutput()
         self.audio.setVolume(0.35)
@@ -202,9 +204,6 @@ class GameMenu(QWidget):
         self.player.setSource(QUrl.fromLocalFile("./ui/cowboy_music.mp3"))
         self.player.mediaStatusChanged.connect(self._loop_music)
         self.player.play()
-
-        self.showFullScreen()
-        self._set_background(self.menu_bg)
 
     def _loop_music(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
@@ -231,9 +230,34 @@ class UIController:
         self.app = QApplication(sys.argv)
         self.window = GameMenu()
 
+        self.heart_full = QPixmap("./ui/full_heart.png").scaled(50, 50)
+        self.heart_empty = QPixmap("./ui/empty_heart.png").scaled(50, 50)
+
+        self.p1_hearts = []
+        self.p2_hearts = []
+
+        for i in range(3):
+            lbl = QLabel(self.window)
+            lbl.setPixmap(self.heart_full)
+            lbl.resize(48, 48)
+            lbl.move(20 + i * 54, 20)
+            lbl.show()
+            self.p1_hearts.append(lbl)
+
+        for i in range(3):
+            lbl = QLabel(self.window)
+            lbl.setPixmap(self.heart_full)
+            lbl.resize(48, 48)
+            lbl.show()
+            self.p2_hearts.append(lbl)
+
+        w = self.window.width()
+        for i, lbl in enumerate(self.p2_hearts):
+            lbl.move(w - (3 - i) * 54 - 20, 20)
+
         self.camera_label = QLabel(self.window)
-        self.camera_label.setFixedSize(960, 540)
         self.camera_label.setStyleSheet("background: black;")
+        self.camera_label.setFixedSize(800, 600)
         self.camera_label.hide()
 
         self.error_label = QLabel(self.window)
@@ -260,7 +284,7 @@ class UIController:
         pix = QPixmap.fromImage(img)
 
         self.camera_label.setPixmap(
-            pix.scaled(self.camera_label.size(), Qt.AspectRatioMode.IgnoreAspectRatio)
+            pix.scaled(self.camera_label.size(), Qt.AspectRatioMode.KeepAspectRatio)
         )
         self.camera_label.move(
             (self.window.width() - self.camera_label.width()) // 2,
@@ -269,6 +293,8 @@ class UIController:
         self.app.processEvents()
 
     def show_menu(self):
+        for h in self.p1_hearts + self.p2_hearts:
+            h.hide()
         self.window.menu_widget.show()
         self.window.ask_widget.hide()
         self.window.rules_widget.hide()
@@ -290,14 +316,18 @@ class UIController:
         self.camera_label.hide()
 
     def show_game(self):
+        for h in self.p1_hearts + self.p2_hearts:
+            h.show()
         self.window.menu_widget.hide()
         self.window.ask_widget.hide()
         self.window.rules_widget.hide()
-        self.window.game_widget.show()
         self.camera_label.show()
+        self.window.game_widget.show()
+        self.window.game_widget.raise_()
 
     def show_countdown(self, value):
         self.window.game_widget.setText(str(value))
+        self.window.game_widget.raise_()
 
     def show_error(self, text):
         if text:
@@ -310,3 +340,44 @@ class UIController:
             self.error_label.show()
         else:
             self.error_label.hide()
+
+    def show_text(self, text):
+            self.window.game_widget.setText(str(text))
+            self.window.game_widget.setStyleSheet("""
+                QLabel {
+                    font-size: 160px;
+                    color: red;
+                    background: rgba(0,0,0,0);
+                    padding: 30px;
+                    border-radius: 20px;
+                }
+            """)
+            self.window.game_widget.show()
+            self.window.game_widget.raise_()
+
+    def update_hp(self, p1_hp, p2_hp):
+        for i, lbl in enumerate(self.p1_hearts):
+            lbl.setPixmap(self.heart_full if i < p1_hp else self.heart_empty)
+
+        for i, lbl in enumerate(self.p2_hearts):
+            lbl.setPixmap(self.heart_full if i < p2_hp else self.heart_empty)
+
+        w = self.window.width()
+        for i, lbl in enumerate(self.p2_hearts):
+            lbl.move(w - (3 - i) * 54 - 20, 20)
+
+
+
+    def show_final_result(self, text):
+        self.window.game_widget.setText(text)
+        self.window.game_widget.setStyleSheet("""
+            QLabel {
+                font-size: 70px;
+                color: white;
+                background: rgba(0,0,0,180);
+                padding: 40px;
+                border-radius: 25px;
+            }
+        """)
+        self.window.game_widget.show()
+        self.window.game_widget.raise_()

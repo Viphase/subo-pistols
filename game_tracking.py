@@ -53,17 +53,17 @@ def debugf(frame, player1, player2):
 
     if player1.collider:
         
-        for i, _ in enumerate(player1.collider):
-            start = (int(player1.collider[0].start.x), int(player1.collider[0].start.y))
-            end = (int(player1.collider[2].end.x), int(player1.collider[2].end.y))
-            c = colors[i] if i < len(colors) else colors[-1]
+        for i, seg in enumerate(player1.collider):
+            start = (int(seg.start.x), int(seg.start.y))
+            end   = (int(seg.end.x),   int(seg.end.y))
+            c = colors[i]
             line(frame, start, end, c, 6)
 
     if player2.collider:
-        for i, _ in enumerate(player2.collider):
-            start = (int(player2.collider[0].start.x), int(player2.collider[0].start.y))
-            end = (int(player2.collider[2].end.x), int(player2.collider[2].end.y))
-            c = colors[i] if i < len(colors) else colors[-1]
+        for i, seg in enumerate(player2.collider):
+            start = (int(seg.start.x), int(seg.start.y))
+            end   = (int(seg.end.x),   int(seg.end.y))
+            c = colors[i]
             line(frame, start, end, c, 6)
 
     putText(frame, f"P1: {player1.state}", (50,50), FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
@@ -114,8 +114,6 @@ class Human:
     def in_ready_pos(self):
         return (
             self.pose is not None and
-            self.left_hand is not None and
-            self.right_hand is not None and
             len(self.pose) >= 26
         )
 
@@ -149,16 +147,18 @@ class Human:
         if self.pose is None or len(self.pose) < 33:
             return None
     
-        nose, neck = self.pose[0], self.pose[1]
+        nose = self.pose[0]
         k1, k2 = self.pose[31], self.pose[32]
+        neck = ((self.pose[12].x * self.img_shape[1] + self.pose[11].x * self.img_shape[1]) // 2, (self.pose[12].y  * self.img_shape[0] + self.pose[11].y * self.img_shape[0]) // 2)
 
         head = (
             int(nose.x * self.img_shape[1]),
-            int(nose.y * self.img_shape[0] - 4 * (nose.y - neck.y) * self.img_shape[0]))
+            int(neck[1] + 2 *(nose.y * self.img_shape[0] - neck[1]))
+        )
         
         neck = (
-            int(neck.x * self.img_shape[1]),
-            int(neck.y * self.img_shape[0])
+            int(neck[0]),
+            int(neck[1])
         )
 
         hip1, hip2 = self.pose[24], self.pose[23]
@@ -236,29 +236,3 @@ class Human:
             return 'First missed'
 
 
-def round(first_player, second_player, shape):
-
-    if first_player.right_hand is not None and is_pistol(first_player.right_hand, shape):
-        first_player.state = "Gun"
-    elif first_player.left_hand is not None and is_shield(first_player.left_hand, shape):
-        first_player.state = "Shield"
-    else:
-        first_player.state = "Nothing"
-
-    if second_player.right_hand is not None and is_pistol(second_player.right_hand, shape):
-        second_player.state = "Gun"
-    elif second_player.left_hand is not None and is_shield(second_player.left_hand, shape):
-        second_player.state = "Shield"
-    else:
-        second_player.state = "Nothing"
-
-    if first_player.state == "Gun" and second_player.state != 'Gun':
-        result = first_player.shoot(second_player)
-    elif first_player.state != "Gun" and second_player.state == "Gun":
-        result = second_player.shoot(first_player)
-    elif first_player.state == "Gun" and second_player.state == 'Gun':
-        result = first_player.shoot(second_player) + "\n" + second_player.shoot(first_player)
-    else:
-        result = "No shot"
-    
-    return result

@@ -2,12 +2,14 @@ from cv2 import VideoCapture, CAP_PROP_BUFFERSIZE, flip
 from utils.tracking import MediaPipeFacade, split_players
 from game_tracking import *
 from ui import UI_EVENTS, UIController
+import time
 
 GAME = {
-    "state": "menu",#menu, ask_rules, rules, check, countdown, round
+    "state": "menu",#menu, ask_rules, rules, check, countdown, round, final
     "num_people": 0,
     "countdown": 3,
-    "error": None
+    "reaction_time": 5,
+    "error": None,
 }
 ui = UIController()
 
@@ -19,17 +21,39 @@ def check_players(first, second):
             return "В кадре должно быть ровно 2 игрока!"
 
     if not first.in_ready_pos or not second.in_ready_pos:
-        return "Руки или колени не видны!"
+        return "Колени не видны! (Могут быть не в своей половине кадра!)"
 
     if first.state != "Nothing" or second.state != "Nothing":
         return "Не показывайте жесты!"
 
     return None
 
-def round(first, second):
-    ...
+def round(first_player, second_player, shape):
 
-    return None
+    if first_player.right_hand is not None and is_pistol(first_player.right_hand, shape):
+        first_player.state = "Gun"
+    elif first_player.left_hand is not None and is_shield(first_player.left_hand, shape):
+        first_player.state = "Shield"
+    else:
+        first_player.state = "Nothing"
+
+    if second_player.right_hand is not None and is_pistol(second_player.right_hand, shape):
+        second_player.state = "Gun"
+    elif second_player.left_hand is not None and is_shield(second_player.left_hand, shape):
+        second_player.state = "Shield"
+    else:
+        second_player.state = "Nothing"
+
+    if first_player.state == "Gun" and second_player.state != 'Gun':
+        result = first_player.shoot(second_player)
+    elif first_player.state != "Gun" and second_player.state == "Gun":
+        result = second_player.shoot(first_player)
+    elif first_player.state == "Gun" and second_player.state == 'Gun':
+        result = first_player.shoot(second_player) + "\n" + second_player.shoot(first_player)
+    else:
+        result = "No shot"
+    
+    return result
 
 
 def main():
@@ -52,7 +76,7 @@ def main():
         if not ret:
             break
 
-        if frame_number % 3 == 0:
+        if frame_number % 1 == 0:
             frame, hands_results, pose_results = mp_facade.process_frame(frame, debug=True)
         frame_number += 1
 
@@ -99,7 +123,7 @@ def main():
                 UI_EVENTS["instruction_yes"] = False
                 GAME["state"] = "rules"
 
-            if UI_EVENTS["instruction_no"]:
+            if UI_EVENTS["instruction_no"]: 
                 UI_EVENTS["instruction_no"] = False
                 GAME["state"] = "check"
 
@@ -115,6 +139,7 @@ def main():
             GAME["error"] = check_players(first_player, second_player)
 
             if GAME["error"] is None:
+                countdown_time = time.time()
                 GAME["countdown"] = 3
                 GAME["state"] = "countdown"
 
@@ -124,25 +149,58 @@ def main():
             if GAME["error"] is not None:
                 GAME["state"] = "check"
             else:
-                ui.show_countdown(GAME["countdown"])
-
-                if frame_number % 30 == 0:
+                ui.show_text(GAME["countdown"])
+                current_time = time.time()
+                if current_time - countdown_time >= 1:
                     GAME["countdown"] -= 1
+                    countdown_time = current_time
 
                 if GAME["countdown"] <= 0:
                     GAME["state"] = "round"
+                    reaction_time = time.time()
 
         elif GAME["state"] == "round":
             ui.show_game()
-            round(first_player, second_player)
-            GAME["state"] = "result"
-            GAME["result_timer"] = 90
+            ui.update_hp(int(first_player.hp), int(second_player.hp))
+            current_time = time.time()
+            if current_time - reaction_time >= 3:
+                result = round(first_player, second_player, frame.shape)
+                GAME["round_result"] = result
+                GAME["state"] = "result"
+                GAME["result_timer"] = 60
 
         elif GAME["state"] == "result":
-            putText(frame, f"Счёт: {first_player.won} : {second_player.won}", 
-                    (frame.shape[1]//2 - 200, frame.shape[0]//2), FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 4)
+            ui.show_game()
+            ui.update_hp(int(first_player.hp), int(second_player.hp))
+            ui.show_text(result)
+
             GAME["result_timer"] -= 1
             if GAME["result_timer"] <= 0:
+                GAME["round_result"] = ""
+
+                if first_player.hp > 0 and second_player.hp > 0:
+                    GAME["state"] = "check"
+                else:
+                    GAME["state"] = "final"
+
+        elif GAME["state"] == "final":
+            ui.show_game()
+
+            if first_player.hp > second_player.hp:
+                text = "ЛЕВЫЙ ИГРОК ПОБЕДИЛ!"
+            elif second_player.hp > first_player.hp:
+                text = "ПРАВЫЙ ИГРОК ПОБЕДИЛ!"
+            else:
+                text = "НИЧЬЯ"
+
+            ui.show_final_result(text)
+
+            GAME["result_timer"] -= 1
+            if GAME["result_timer"] <= 0:
+                first_player.hp = 3
+                second_player.hp = 3
+                first_player.state = "Nothing"
+                second_player.state = "Nothing"
                 GAME["state"] = "menu"
 
         debugf(frame, first_player, second_player)
