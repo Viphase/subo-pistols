@@ -33,7 +33,7 @@
 
 - ## installation & use
 
-  0. You need to have `Python` and `pip` installed
+  0. You need to have `Python3.11.4` and `pip` installed
   1. Open terminal and run `git clone https://github.com/Viphase/cowboy-shootout.git && cd cowboy-shootout`
   2. Initialize venv (MacOS) - `python -m venv .venv && source .venv/bin/activate`
     2.1 (Windows) - `python -m venv .venv && .\.venv\Scripts\activate`
