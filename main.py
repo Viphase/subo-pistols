@@ -46,13 +46,13 @@ def round(first_player, second_player, shape):
         second_player.state = "Nothing"
 
     if first_player.state == "Gun" and second_player.state != 'Gun':
-        result = "FIRST:" + first_player.shoot(second_player)
+        result = "ПЕРВЫЙ:" + first_player.shoot(second_player)
     elif first_player.state != "Gun" and second_player.state == "Gun":
-        result = "SECOND:" + second_player.shoot(first_player)
+        result = "ВТОРОЙ:" + second_player.shoot(first_player)
     elif first_player.state == "Gun" and second_player.state == 'Gun':
-        result = "FIRST" + first_player.shoot(second_player) + "\n" + "SECOND:" + second_player.shoot(first_player)
+        result = "ПЕРВЫЙ" + first_player.shoot(second_player) + "\n" + "ВТОРОЙ:" + second_player.shoot(first_player)
     else:
-        result = "No shot"
+        result = "НЕТ ВЫСТРЕЛОВ"
     
     return result
 
@@ -77,7 +77,7 @@ def main():
             break
 
         if frame_number % 1 == 0:
-            frame, hands_results, pose_results = mp_facade.process_frame(frame, debug=True)
+            frame, hands_results, pose_results = mp_facade.process_frame(frame, debug=False)
         frame_number += 1
 
         split = split_players(pose_results, hands_results, frame.shape)

@@ -1,7 +1,8 @@
 from numpy import array, int32
-from cv2 import minEnclosingCircle, FONT_HERSHEY_SIMPLEX, putText, line, getTextSize, rectangle
+from cv2 import minEnclosingCircle, FONT_HERSHEY_SIMPLEX, putText, line, getTextSize, rectangle, circle
 from utils.line import crossRS as cross_ray_segment
 from utils.line import Segment, Ray
+from math import sin, cos, radians
 
 
 def finger_dist(a, b, hand, shape) -> float:
@@ -77,6 +78,9 @@ def debugf(frame, player1, player2):
     debug_tag(frame, player1, 1)
     debug_tag(frame, player2, 2)
 
+    debug_ray(frame, player1, (0, 255, 255))
+    debug_ray(frame, player2, (255, 255, 0))
+
     line(frame, (frame.shape[1]//2, 0), (frame.shape[1]//2, frame.shape[0]), (0, 255, 0), 4)
 
 def debug_tag(frame, player, index):
@@ -87,11 +91,25 @@ def debug_tag(frame, player, index):
     x = int(nose.x * player.img_shape[1])
     y = int(nose.y * player.img_shape[0]) - 20
 
-    text = f"#{index} {player.state}"
+    text = f"#{index} : {player.state}"
     (w, h), _ = getTextSize(text, FONT_HERSHEY_SIMPLEX, 0.5, 1)
 
     rectangle(frame, (x - 2, y - h - 2), (x + w + 2, y + 2), (50, 50, 50), -1)
     putText(frame, text, (x, y), FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+def debug_ray(frame, player, color=(0, 255, 255)):
+    ray = player.bullet
+    if ray is None:
+        return
+
+    x1, y1 = int(ray.start.x), int(ray.start.y)
+    dx = cos(radians(ray.angle))
+    dy = sin(radians(ray.angle))
+    length = 2000
+    x2 = int(x1 + dx * length)
+    y2 = int(y1 + dy * length)
+
+    line(frame, (x1, y1), (x2, y2), color, 3)
 
 class Human:
     def __init__(self, hands_results, pose_results, img_shape):
@@ -177,11 +195,11 @@ class Human:
     def bullet(self):
         try:
             start = (
-                self.pose[14].x *  self.img_shape[1],
-                self.pose[14].y *  self.img_shape[0])
+                self.pose[13].x *  self.img_shape[1],
+                self.pose[13].y *  self.img_shape[0])
             end = (
-                self.pose[16].x *  self.img_shape[1],
-                self.pose[16].y *  self.img_shape[0])
+                self.pose[15].x *  self.img_shape[1],
+                self.pose[15].y *  self.img_shape[0])
             
             return Ray(start=start, point=end)
         except:
@@ -208,31 +226,32 @@ class Human:
 
     def shoot(self, enemy) -> bool:
         self._shot = True
+        enemy.safe = {"head": False, "body": False, "legs": False}
 
         if enemy.state == "Shield":
             enemy.shield
 
         if cross_ray_segment(self.bullet, enemy.collider[0]):
             if enemy.safe['head']:
-                return 'enemy defended'
+                return 'враг защитился'
             else:
                 enemy.hp -= 1.5
-                return 'headshot'
+                return 'выстрел в голову'
             
         elif cross_ray_segment(self.bullet, enemy.collider[1]):
             if enemy.safe['body']:
-                return 'enemy defended'
+                return 'противник защитился'
             else:
                 enemy.hp -= 1
-                return 'bodyshot'
+                return 'выстрел в тело'
             
         elif cross_ray_segment(self.bullet, enemy.collider[2]):
             if enemy.safe['legs']:
-                return 'enemy defended'
+                return 'враг защитился'
             else:
                 enemy.hp -= .5
-                return 'legshot'
+                return 'выстрел в ноги'
         else:
-            return 'missed'
+            return 'промах'
 
 
