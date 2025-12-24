@@ -163,7 +163,7 @@ def main():
             ui.show_game()
             ui.update_hp(int(first_player.hp), int(second_player.hp))
             current_time = time.time()
-            if current_time - reaction_time >= 3:
+            if current_time - reaction_time >= 2:
                 result = round(first_player, second_player, frame.shape)
                 GAME["round_result"] = result
                 GAME["state"] = "result"
@@ -172,7 +172,7 @@ def main():
         elif GAME["state"] == "result":
             ui.show_game()
             ui.update_hp(int(first_player.hp), int(second_player.hp))
-            ui.show_text(result)
+            ui.show_text(GAME["round_result"])
 
             GAME["result_timer"] -= 1
             if GAME["result_timer"] <= 0:

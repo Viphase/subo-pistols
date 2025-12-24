@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QHBoxLayout
 from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFontDatabase, QFont, QImage
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import Qt, QUrl, QTimer
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from cv2 import COLOR_BGR2RGB, cvtColor
 import sys
@@ -187,7 +187,7 @@ class GameMenu(QWidget):
         main_layout.addWidget(self.game_widget)
 
         self.exit_btn.clicked.connect(QApplication.quit)
-        self.play_btn.clicked.connect(lambda: UI_EVENTS.update({"start": True}))
+        self.play_btn.clicked.connect(self._on_play_clicked)
         self.continue_btn.clicked.connect(lambda: UI_EVENTS.update({"continue_game": True}))
 
         self.yes_btn.clicked.connect(lambda: UI_EVENTS.update({"instruction_yes": True}))
@@ -203,6 +203,14 @@ class GameMenu(QWidget):
         self.player.setAudioOutput(self.audio)
         self.player.setSource(QUrl.fromLocalFile("./ui/cowboy_music.mp3"))
         self.player.mediaStatusChanged.connect(self._loop_music)
+        self.player.play()
+        QTimer.singleShot(100, self._load_music)
+    
+    def _on_play_clicked(self):
+            UI_EVENTS["start"] = True
+
+    def _load_music(self):
+        self.player.setSource(QUrl.fromLocalFile("./ui/cowboy_music.mp3"))
         self.player.play()
 
     def _loop_music(self, status):
@@ -220,9 +228,25 @@ class GameMenu(QWidget):
         self.setPalette(palette)
 
     def resizeEvent(self, event):
-        bg = self.game_bg if self.game_widget.isVisible() else self.menu_bg
+        if hasattr(self, '_current_state'):
+            if self._current_state == 'game':
+                bg = self.game_bg
+            else:
+                bg = self.menu_bg
+        else:
+            bg = self.menu_bg
+        
         self._set_background(bg)
         super().resizeEvent(event)
+
+    # Добавить метод для установки состояния
+    def set_state(self, state):
+        self._current_state = state
+        self.update_background()
+
+    def update_background(self):
+        bg = self.game_bg if self._current_state == 'game' else self.menu_bg
+        self._set_background(bg)
 
 
 class UIController:
@@ -323,10 +347,6 @@ class UIController:
         self.window.rules_widget.hide()
         self.camera_label.show()
         self.window.game_widget.show()
-        self.window.game_widget.raise_()
-
-    def show_countdown(self, value):
-        self.window.game_widget.setText(str(value))
         self.window.game_widget.raise_()
 
     def show_error(self, text):

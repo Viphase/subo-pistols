@@ -17,7 +17,7 @@
 
   [![Cowboy-Shootout](ui/image.png)](./ui/video.mp4)
 
-  > You play against your opponent standing in front of you. When the second will say "SHOOT!" you should decide between two options:
+  > You play against your opponent standing in front of you. When the countdown has ended you should decide between two options:
   >
   > 1. Take a shot _(by aiming gun gesture to one of the segments of opponents body)_
   > 2. Protect yourself _(by aiming hand gesture to one of the segments of opponents body)_
@@ -28,7 +28,7 @@
     - Torso 👕
     - Legs 🦵
 
-  - If you all choose gun, the fastest cowboy will win _(the other, unfortunatley loose 1 out of 3 hearts)_. If you all choose to protect - nothing will happen and the second round will begin.
+  - If you all choose gun, you'll shoot each other. If you all choose to protect - nothing will happen and the second round will begin.
     As you may notice you have 3 hearts (❤️❤️❤️). Loose all = loose a game.
 
 - ## installation & use

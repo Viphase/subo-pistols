@@ -13,5 +13,4 @@
 * **19.12** - requirements added and readme changes. Basic round logic added by Timur G.
 * **21.12** - minor bug fix and tracking logic update, added debug drawing fucntion.
 * **22.12** - major ui update, readme changes and connected ui with game logic. Body segments mechanic added by Timur G.
-* **23.12** - minor changes in game logic and "player check" function added
-* **23.12** - tested the final game
+* **23.12** - minor changes in game logic and "player check" function added. Tested the final game, added examples
